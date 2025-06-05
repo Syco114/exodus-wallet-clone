@@ -1,0 +1,101 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Create iOS Project
+      run: |
+        # Create project structure
+        mkdir -p ExodusWallet/ExodusWallet
+        cd ExodusWallet
+        
+        # Create the main app entry point
+        cat > ExodusWallet/ExodusWalletApp.swift << 'EOF'
+        import SwiftUI
+        
+        @main
+        struct ExodusWalletApp: App {
+            var body: some Scene {
+                WindowGroup {
+                    ContentView()
+                        .preferredColorScheme(.dark)
+                }
+            }
+        }
+        EOF
+        
+        # Copy our main content
+        cp ../ContentView.swift ExodusWallet/
+        
+        # Create Info.plist
+        cat > ExodusWallet/Info.plist << 'EOF'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleDisplayName</key>
+            <string>Exodus</string>
+            <key>CFBundleExecutable</key>
+            <string>ExodusWallet</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.github.exodus</string>
+            <key>CFBundleName</key>
+            <string>Exodus</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>LSRequiresIPhoneOS</key>
+            <true/>
+            <key>UIApplicationSceneManifest</key>
+            <dict>
+                <key>UIApplicationSupportsMultipleScenes</key>
+                <true/>
+            </dict>
+            <key>UISupportedInterfaceOrientations</key>
+            <array>
+                <string>UIInterfaceOrientationPortrait</string>
+            </array>
+            <key>UIMinimumSupportedIOSVersion</key>
+            <string>15.0</string>
+        </dict>
+        </plist>
+        EOF
+        
+        echo "Project structure created!"
+        ls -la ExodusWallet/
+    
+    - name: Create IPA Package
+      run: |
+        cd ExodusWallet
+        
+        # Create app bundle structure
+        mkdir -p Payload/Exodus.app
+        
+        # Copy all files to app bundle
+        cp -r ExodusWallet/* Payload/Exodus.app/
+        
+        # Create the IPA
+        cd Payload
+        zip -r ../Exodus.ipa .
+        cd ..
+        
+        echo "IPA created!"
+        ls -la *.ipa
+    
+    - name: Upload IPA
+      uses: actions/upload-artifact@v4
+      with:
+        name: Exodus-Wallet-IPA
+        path: ExodusWallet/Exodus.ipa
